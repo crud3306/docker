@@ -118,7 +118,7 @@ docker run --name xxx -it $mirror-name /bin/bash
 ```sh
 #以后台运行方式
 docker run -it -d $mirror-name /bin/bash
-docker run  -it -d --name xxx $mirror-name /bin/bash
+docker run -it -d --name xxx $mirror-name /bin/bash
 #-d 操作使容器在后台运行
 #--name xxx名字 来指定启动后的容器的名字
 ```
