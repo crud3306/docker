@@ -21,14 +21,33 @@
 ------------
 可以在安装了 Docker 的机器上使用以下指令搜索镜像，不过还是建议通过访问镜像商店的方式搜索。注意，$mirror-name 需要替换为想要搜索的镜像名。
 > docker search $mirror-name
+```sh
+docker search nginx
+```
 
 
 获取镜像
 ------------
+获取docker image 的方式有两种：
+- 第一种： 将镜像推送到公有的镜像仓库，然后pull下来，
+
 可以使用以下指令拉取镜像到本地，其中冒号后的 $tag 为镜像的版本标签，如果省略冒号及之后的内容，则为下载最新版本即 :latest。版本标签信息可以在镜像市场中查找到。
 > docker pull $mirror-name:$tag
 
 注意，若下载的镜像携带有版本标签，则之后对这一镜像的使用都需要携带版本标签，否则会因为版本不同而再次下载。
+
+- 第二种： 将镜像打包，拷贝到目标服务器中，然后导入镜像
+```sh
+#将镜像存储
+docker save nginx:latest > /root/docker-images/nginx.tar
+
+#导入镜像有两种方式
+#1)：导入镜像文件
+docker load --input /root/docker-images/nginx.tar
+
+#2)：通过符号的方式来导入
+docker load < /root/docker-images/nginx.tar
+```
 
 
 查看镜像
@@ -44,16 +63,47 @@
 ------------
 我们可以通过以下方式删除镜像，但此时需要保证没有容器使用这一镜像：
 ```sh
-docker rmi $mirror-name
+docker rmi $mirror-name|$mirror-id
 
 #或者
-docker image rm $mirror-name
+docker image rm $mirror-name|$mirror-id
 ```
 
 
 
 容器操作
 ============
+```sh
+#查看本地容器
+docker ps
+docker ps -a
+#或者
+docker container ls
+docker container ls -a
+
+#启动、重启、关闭
+docker start 容器名称
+docker restart 容器名称
+docker stop 容器名称
+#或者
+docker container start 容器名称
+docker container restart 容器名称
+docker container stop 容器名称
+
+#进入某个正在执行的容器内部
+docker exec -it 容器名 /bin/bash
+
+#删除容器
+docker rm 容器名
+#或者
+docker container rm 容器名
+
+#强制删除正在运行的容器
+docker rm -f 容器名
+#或者
+docker container rm -f 容器名
+```
+
 查看已启动的容器
 ------------
 > docker ps
@@ -70,8 +120,49 @@ docker image rm $mirror-name
 > docker logs $container-name
 
 
-生成容器
+生成容器（创建一个新的容器并执行）
 ------------
+> docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+
+OPTIONS说明：  
+```
+-a stdin: 指定标准输入输出内容类型，可选 STDIN/STDOUT/STDERR 三项；
+
+-d: 后台运行容器，并返回容器ID；
+
+-i: 以交互模式运行容器，通常与 -t 同时使用；
+
+-P: 随机端口映射，容器内部端口随机映射到主机的高端口
+
+-p: 指定端口映射，格式为：主机(宿主)端口:容器端口
+
+-t: 为容器重新分配一个伪输入终端，通常与 -i 同时使用；
+
+--name="nginx-lb": 为容器指定一个名称；
+
+--dns 8.8.8.8: 指定容器使用的DNS服务器，默认和宿主一致；
+
+--dns-search example.com: 指定容器DNS搜索域名，默认和宿主一致；
+
+-h "mars": 指定容器的hostname；
+
+-e username="ritchie": 设置环境变量；
+
+--env-file=[]: 从指定文件读入环境变量；
+
+--cpuset="0-2" or --cpuset="0,1,2": 绑定容器到指定CPU运行；
+
+-m :设置容器使用内存最大值；
+
+--net="bridge": 指定容器的网络连接类型，支持 bridge/host/none/container: 四种类型；
+
+--link=[]: 添加链接到另一个容器；
+
+--expose=[]: 开放一个端口或一组端口；
+
+--volume , -v: 绑定一个卷
+```
+
 可以通过以下方式生成一个基于某一镜像的容器，注意，如果宿主机中没有该镜像则会先进行下载。务必注意镜像标签是否正确。
 > docker run $mirror-name:$tag
 
@@ -139,8 +230,50 @@ docker run -it -d --name xxx $mirror-name /bin/bash
 docker rm $(docker ps -aq)
 
 
-xx
-------------
+生成镜像过程 
+-------------
+创建Dockerfile文件，目前在xx机器/home/xxx/dockertest/php_nginx下
+
+build一个镜像
+sudo docker build -t 自定义的镜像名称 .
+
+
+执行一个镜像
+sudo docker run --restart=always -p 9006:9000 --name 自定义容器名称 -v /data/www:/www -idt xxxx镜像名称
+
+sudo docker run --restart=always -p 8084:80 -p 8089:8089 -idt xxxx镜像名称
+
+sudo docker run --restart=always -p 8084:8084 -p 8089:8089 -idt xxxx镜像名称
+
+sudo docker run -d -i -t -p 8080:80 镜像名称
+
+
+进入一个正在执行的容器中
+sudo docker exec -it 容器id /bin/bash
+sudo docker exec -it 容器id bash
+
+
+docker commit :从容器创建一个新的镜像。
+----------------
+docker commit [OPTIONS] CONTAINER_ID [REPOSITORY[:TAG]]
+```
+OPTIONS说明：
+-a :提交的镜像作者；
+-c :使用Dockerfile指令来创建镜像；
+-m :提交时的说明文字；
+-p :在commit时，将容器暂停。
+```
+
+例1
+```
+docker commit -a "runoob.com" -m "my apache" a404c6c174a2  mymysql:v1 
+```
+
+例2
+```
+docker commit -m  ""   -a  ""   [CONTAINER ID]  [给新的镜像命名]
+docker commit -m  ""   -a  "" aa myelasticsearch:1.0
+```
 
 
 
